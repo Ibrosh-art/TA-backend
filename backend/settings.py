@@ -26,7 +26,12 @@ SECRET_KEY = 'django-insecure-g04yo+-id-3yivr3i#h3h0$eu-venv@ur_^7cja1ydvc5b4#0$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'ta-backend-9c7h.onrender.com',
+    'localhost',                     
+    '127.0.0.1',                    
+    'tradesadvisor.ai',
+]
 
 
 # Application definition
