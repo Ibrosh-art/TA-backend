@@ -58,6 +58,8 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://tradesadvisor.ai",
+    "https://ta-backend-9c7h.onrender.com",
 ]
 
 
@@ -142,10 +144,6 @@ REST_FRAMEWORK = {
     ]
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "https://your-frontend-domain.com",
-    "http://localhost:3000"  # для локальной разработки
-]
 
 
-ALLOWED_HOSTS = ['your-backend-url.onrender.com', 'your-frontend-domain.com']
+ALLOWED_HOSTS = ['https://ta-backend-9c7h.onrender.com/', 'https://tradesadvisor.ai/']
