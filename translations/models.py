@@ -1,5 +1,22 @@
 from django.db import models
 
+from django.db import models
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class TranslationHistory(models.Model):
+    translation = models.ForeignKey('TranslationText', on_delete=models.CASCADE, related_name='history')
+    old_text = models.TextField()
+    new_text = models.TextField()
+    changed_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-changed_at']
+
+    def __str__(self):
+        return f"{self.translation.key} changed at {self.changed_at}"
 class TranslationNamespace(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
