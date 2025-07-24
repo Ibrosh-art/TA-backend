@@ -30,8 +30,18 @@ def get_translations(request, language):
                     translation = key.translations.get(language=language)
                     parts = key.key_path.split('.')
                     current = ns_data
+                    
+                    # Проходим по всем частям пути кроме последней
                     for part in parts[:-1]:
-                        current = current.setdefault(part, {})
+                        # Если текущий уровень - строка, создаем словарь
+                        if isinstance(current.get(part), str):
+                            current[part] = {}
+                        # Если ключа нет или это не словарь - создаем словарь
+                        if part not in current or not isinstance(current[part], dict):
+                            current[part] = {}
+                        current = current[part]
+                    
+                    # На последнем уровне сохраняем текст перевода
                     current[parts[-1]] = translation.text
                 except TranslationText.DoesNotExist:
                     continue
@@ -39,14 +49,12 @@ def get_translations(request, language):
             if ns_data:
                 result[ns.name] = ns_data
         
-        response = Response(result)
-        response['Cache-Control'] = 'no-store, max-age=0'
-        return response
+        return Response(result)
     
     except Exception as e:
         logger.error(f"Get translations error: {str(e)}", exc_info=True)
         return Response(
-            {'error': 'Internal server error'}, 
+            {'error': 'Internal server error', 'details': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
