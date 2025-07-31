@@ -1,56 +1,57 @@
+from django.core.cache import cache
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import transaction
 from django.contrib.auth import get_user_model
-from .models import (
-    TranslationNamespace, 
-    TranslationKey, 
-    TranslationText,
-    TranslationHistory
-)
+from .models import TranslationNamespace, TranslationKey, TranslationText, TranslationHistory
 import logging
 import json
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+def build_translations_dict(language):
+    namespaces = TranslationNamespace.objects.prefetch_related('keys__translations').all()
+    result = {}
+    
+    for ns in namespaces:
+        ns_data = {}
+        for key in ns.keys.all():
+            try:
+                translation = key.translations.get(language=language)
+                parts = key.key_path.split('.')
+                current = ns_data
+                
+                for part in parts[:-1]:
+                    if isinstance(current.get(part), str):
+                        current[part] = {}
+                    if part not in current or not isinstance(current[part], dict):
+                        current[part] = {}
+                    current = current[part]
+                
+                current[parts[-1]] = translation.text
+            except TranslationText.DoesNotExist:
+                continue
+        
+        if ns_data:
+            result[ns.name] = ns_data
+    
+    return result
+
 @api_view(['GET'])
 def get_translations(request, language):
-    try:
-        namespaces = TranslationNamespace.objects.prefetch_related(
-            'keys__translations'
-        ).all()
-        
-        result = {}
-        for ns in namespaces:
-            ns_data = {}
-            for key in ns.keys.all():
-                try:
-                    translation = key.translations.get(language=language)
-                    parts = key.key_path.split('.')
-                    current = ns_data
-                    
-                    # Проходим по всем частям пути кроме последней
-                    for part in parts[:-1]:
-                        # Если текущий уровень - строка, создаем словарь
-                        if isinstance(current.get(part), str):
-                            current[part] = {}
-                        # Если ключа нет или это не словарь - создаем словарь
-                        if part not in current or not isinstance(current[part], dict):
-                            current[part] = {}
-                        current = current[part]
-                    
-                    # На последнем уровне сохраняем текст перевода
-                    current[parts[-1]] = translation.text
-                except TranslationText.DoesNotExist:
-                    continue
-            
-            if ns_data:
-                result[ns.name] = ns_data
-        
-        return Response(result)
+    cache_key = f'translations_{language}'
+    cached_data = cache.get(cache_key)
     
+    if cached_data:
+        return Response(cached_data)
+    
+    try:
+        translations = build_translations_dict(language)
+        # Кэшируем на 1 час (можно настроить)
+        cache.set(cache_key, translations, 3600)
+        return Response(translations)
     except Exception as e:
         logger.error(f"Get translations error: {str(e)}", exc_info=True)
         return Response(
@@ -70,45 +71,33 @@ def update_translation(request):
         language = data.get('language')
         
         if not all([path, value, language]):
-            logger.warning("Missing required fields in request")
             return Response(
-                {'error': 'Missing required fields: path, value, language'}, 
+                {'error': 'Missing required fields'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         parts = path.split('.')
         if len(parts) < 2:
-            logger.warning(f"Invalid path format: {path}")
             return Response(
-                {'error': 'Path must contain at least namespace and key'}, 
+                {'error': 'Invalid path format'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         namespace_name = parts[0]
         key_path = '.'.join(parts[1:])
         
-        try:
-            namespace = TranslationNamespace.objects.get(name=namespace_name)
-        except TranslationNamespace.DoesNotExist:
-            namespace = TranslationNamespace.objects.create(name=namespace_name)
-            logger.info(f"Created new namespace: {namespace_name}")
-
-        key, created = TranslationKey.objects.get_or_create(
+        namespace, _ = TranslationNamespace.objects.get_or_create(name=namespace_name)
+        key, _ = TranslationKey.objects.get_or_create(
             namespace=namespace,
             key_path=key_path,
             defaults={'description': f"Auto-created for path {path}"}
         )
-        
-        if created:
-            logger.info(f"Created new key: {namespace_name}.{key_path}")
 
-        # Получаем текущий перевод (если есть)
         existing_translation = TranslationText.objects.filter(
             key=key,
             language=language
         ).first()
 
-        # Создаем запись в истории перед изменением
         if existing_translation:
             TranslationHistory.objects.create(
                 translation=existing_translation,
@@ -120,32 +109,20 @@ def update_translation(request):
         translation, created = TranslationText.objects.update_or_create(
             key=key,
             language=language,
-            defaults={
-                'text': value,
-                # updated_at обновится автоматически благодаря auto_now
-            }
+            defaults={'text': value}
         )
 
-        action = "created" if created else "updated"
-        logger.info(
-            f"Successfully {action} translation. "
-            f"Key: {path}, Lang: {language}, "
-            f"User: {request.user.username if request.user else 'anonymous'}"
-        )
-
+        # Инвалидируем кэш для этого языка
+        cache.delete(f'translations_{language}')
+        
         return Response({
             'status': 'success',
-            'action': action,
-            'translation_id': translation.id,
+            'language': language,
             'updated_at': translation.updated_at
         })
     
     except Exception as e:
-        logger.error(
-            f"Translation update failed. Error: {str(e)}", 
-            exc_info=True,
-            extra={'request_data': request.data}
-        )
+        logger.error(f"Translation update failed: {str(e)}", exc_info=True)
         return Response(
             {'error': 'Internal server error'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR

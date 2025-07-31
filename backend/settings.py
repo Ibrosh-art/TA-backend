@@ -29,7 +29,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'ta-backend-9c7h.onrender.com',
     'tradesadvisor.ai',
-    'localhost',
+    'localhost:5173',
     '127.0.0.1',
 ]
 
@@ -53,7 +53,6 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # Должен быть как можно выше
     'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -67,11 +66,43 @@ CORS_ALLOWED_ORIGINS = [
     "https://tradesadvisor.ai",
     "https://ta-backend-9c7h.onrender.com",
 ]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'cache-control',  # Добавляем поддержку cache-control
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+
 CSRF_TRUSTED_ORIGINS = [
     "https://tradesadvisor.ai",
     "https://ta-backend-9c7h.onrender.com",
 ]
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'translations-cache',
+    }
+}
 
 ROOT_URLCONF = 'backend.urls'
 
