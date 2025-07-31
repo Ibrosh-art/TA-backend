@@ -39,8 +39,13 @@ def build_translations_dict(language):
     
     return result
 
-@api_view(['GET'])
+@api_view(['GET', 'OPTIONS'])
 def get_translations(request, language):
+    if request.method == 'OPTIONS':
+        response = Response()
+        response['Access-Control-Allow-Headers'] = 'cache-control, if-none-match'
+        return response
+    
     cache_key = f'translations_{language}'
     cached_data = cache.get(cache_key)
     
