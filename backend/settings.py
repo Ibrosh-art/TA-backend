@@ -1,9 +1,6 @@
 from pathlib import Path
-<<<<<<< HEAD
-=======
 import os
 from corsheaders.defaults import default_headers, default_methods
->>>>>>> 72339dc1b22cc3e32e8aaa1f6ca3e9491fce2329
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,27 +11,17 @@ SECRET_KEY = 'django-insecure-d-)tp-j8ugj#3uihl_j&e!rrxwa3o6+p+aso#@-x1(0%^rp5r_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-<<<<<<< HEAD
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-=======
 ALLOWED_HOSTS = [
     'ta-backend-9c7h.onrender.com',
     'tradesadvisor.ai',
     'www.tradesadvisor.ai',
     'localhost',
     '127.0.0.1',
->>>>>>> 72339dc1b22cc3e32e8aaa1f6ca3e9491fce2329
 ]
 
 # Application definition
 INSTALLED_APPS = [
-<<<<<<< HEAD
-=======
     'corsheaders',
->>>>>>> 72339dc1b22cc3e32e8aaa1f6ca3e9491fce2329
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
